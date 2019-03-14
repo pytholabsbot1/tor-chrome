@@ -1,0 +1,53 @@
+from selenium import webdriver
+import os,subprocess
+from stem.control import Controller
+from stem import Signal
+
+
+class TorChrome:
+    'use tor with chrome for anonymous automation for windows'
+    
+    def __init__(self,tor_path,chromedriver_path='chromedriver'):   
+        self.tor_path = tor_path
+        self.chromedriver_path = chromedriver_path
+        #subprocess.Popen(tor_path+r'\Browser\firefox.exe')
+        
+    def chrome(self):
+        PROXY = "socks5://127.0.0.1:9150"
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--proxy-server=%s' % PROXY)
+        self.driver = webdriver.Chrome(executable_path=self.chromedriver_path,chrome_options=chrome_options)
+        return(self.driver)
+    
+    def configure(self,p=0,sec=10):
+        conf = '''\n#control--
+ControlPort 9051
+CookieAuthentication 1
+HashedControlPassword 16:E600ADC1B52C80BB6022A0E999A7734571A451EB6AE50FED489B72E3DF
+\n\n'''
+        
+        trrc = open(self.tor_path+r'\Browser\TorBrowser\Data\Tor\torrc','r').read()
+        
+        if(conf not in trrc):
+            trrc += conf
+        
+        if(p==1):
+            trrc += '\nMaxCircuitDirtiness '+str(sec)
+            
+        elif(p==2):
+            trrc = trrc.split('\nMaxCircuitDirtiness')[0]
+       
+        open(self.tor_path+r'\Browser\TorBrowser\Data\Tor\torrc','w').write(trrc)
+        print('please restart tor to make the changes effective')
+        
+    def change_ip(self):
+                
+        with Controller.from_port(port = 9051) as controller:
+            controller.authenticate()
+            controller.signal(Signal.NEWNYM)
+    
+    def start_AutoIpChange(self,sec_interval):
+        self.configure(1,sec_interval)
+        
+    def stop_AutoIpChange(self):     
+        self.configure(2)
